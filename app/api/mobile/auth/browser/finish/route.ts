@@ -11,7 +11,9 @@ function isAllowedRedirect(value: string | null): value is string {
   if (!value) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "ixzzy:" && value.startsWith("ixzzy://auth");
+    if (url.protocol === "ixzzy:" && value.startsWith("ixzzy://auth")) return true;
+    if (url.protocol === "exp:") return true;
+    return false;
   } catch {
     return false;
   }

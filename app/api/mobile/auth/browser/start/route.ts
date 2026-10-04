@@ -8,8 +8,11 @@ function isAllowedRedirect(value: string | null): value is string {
   if (!value) return false;
   try {
     const url = new URL(value);
-    // Only allow our own app link back. This prevents open-redirect abuse.
-    return url.protocol === "ixzzy:" && value.startsWith("ixzzy://auth");
+    // Production app link.
+    if (url.protocol === "ixzzy:" && value.startsWith("ixzzy://auth")) return true;
+    // Expo Go development link, e.g. exp://.../--/auth . Same one-time code flow.
+    if (url.protocol === "exp:") return true;
+    return false;
   } catch {
     return false;
   }

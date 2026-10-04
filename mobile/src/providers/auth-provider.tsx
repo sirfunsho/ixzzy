@@ -1,12 +1,12 @@
+import * as AuthSession from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import * as WebBrowser from "expo-web-browser";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Platform } from "react-native";
-import { ApiRequestError, apiRequest } from "../lib/api";
+import { ApiRequestError, API_BASE_URL, apiRequest } from "../lib/api";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const SESSION_KEY = "ixzzy.mobile.session";
-const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
-const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
 
 export type AppUser = { id: string; email: string; name: string | null };
 type MobileSession = { token: string; expiresAt: string; user: AppUser };
@@ -30,15 +30,6 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (googleWebClientId) {
-      GoogleSignin.configure({
-        webClientId: googleWebClientId,
-        ...(googleIosClientId ? { iosClientId: googleIosClientId } : {}),
-      });
-    }
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -91,17 +82,18 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   }, [acceptSession]);
 
   const signInWithGoogle = useCallback(async () => {
-    if (!googleWebClientId || (Platform.OS === "ios" && !googleIosClientId)) {
-      throw new Error("Google sign-in needs its mobile client IDs configured first.");
-    }
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const result = await GoogleSignin.signIn();
-    if (result.type === "cancelled") return;
-    const idToken = result.data.idToken;
-    if (!idToken) throw new Error("Google did not return a sign-in token. Please try again.");
-    const session = await apiRequest<MobileSession>("/api/mobile/auth/google", {
+    // Browser-based Google login (Option B). Opens the website login,
+    // the server prints a 5-minute pickup code, we swap it for a keycard.
+    const redirectUri = AuthSession.makeRedirectUri({ scheme: "ixzzy", path: "auth" });
+    const startUrl = `${API_BASE_URL}/api/mobile/auth/browser/start?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri);
+    if (result.type === "cancel" || result.type === "dismiss") return;
+    if (result.type !== "success") throw new Error("Google sign-in could not be completed. Please try again.");
+    const code = new URL(result.url).searchParams.get("code");
+    if (!code) throw new Error("Google sign-in could not be completed. Please try again.");
+    const session = await apiRequest<MobileSession>("/api/mobile/auth/browser/exchange", {
       method: "POST",
-      body: JSON.stringify({ idToken }),
+      body: JSON.stringify({ code }),
     });
     await acceptSession(session);
   }, [acceptSession]);
@@ -113,7 +105,6 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         .catch(() => undefined);
     }
     await SecureStore.deleteItemAsync(SESSION_KEY).catch(() => undefined);
-    await GoogleSignin.signOut().catch(() => undefined);
     setToken(null);
     setUser(null);
   }, [token]);
@@ -122,7 +113,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     user,
     token,
     loading,
-    googleReady: Boolean(googleWebClientId && (Platform.OS !== "ios" || googleIosClientId)),
+    googleReady: true,
     signInWithPassword,
     signInWithGoogle,
     signOut,
