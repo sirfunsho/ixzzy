@@ -1,6 +1,6 @@
 import { Link, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { API_BASE_URL, apiRequest } from "../../lib/api";
 import { useAuth } from "../../providers/auth-provider";
 import { useCart } from "../../providers/cart-provider";
@@ -14,10 +14,11 @@ type Product = {
 export default function ProductScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { user } = useAuth();
-  const { itemCount, addLine, saving } = useCart();
+  const { itemCount, addLines, saving } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [colour, setColour] = useState("");
   const [size, setSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -43,8 +44,8 @@ export default function ProductScreen() {
     setError(null);
     setNotice(null);
     try {
-      await addLine({ slug: product.slug, colour, size });
-      setNotice("Added to your shared cart.");
+      await addLines({ slug: product.slug, colour, size }, quantity);
+      setNotice(`Added ${quantity} to your shared cart.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "This item could not be added.");
     }
@@ -66,6 +67,12 @@ export default function ProductScreen() {
           <ChoiceRow values={product.colours} selected={colour} onSelect={setColour} />
           <Text style={styles.label}>SIZE</Text>
           <ChoiceRow values={product.sizes} selected={size} onSelect={setSize} />
+          <Text style={styles.label}>QUANTITY</Text>
+          <View style={styles.qtyRow}>
+            <Pressable disabled={saving || quantity <= 1} onPress={() => setQuantity((q) => Math.max(1, q - 1))} style={styles.qtyBtn}><Text style={styles.qtyBtnText}>−</Text></Pressable>
+            <Text style={styles.qtyNumber}>{quantity}</Text>
+            <Pressable disabled={saving || quantity >= 99} onPress={() => setQuantity((q) => Math.min(99, q + 1))} style={styles.qtyBtn}><Text style={styles.qtyBtnText}>+</Text></Pressable>
+          </View>
           {!user ? <View style={styles.signInNote}><Text style={ui.body}>Sign in to add items to your shared cart.</Text><Link href="/account" style={styles.signInLink}>SIGN IN →</Link></View> : null}
           {user ? <View style={{ marginTop: 22 }}><PrimaryButton title="ADD TO CART" loading={saving} onPress={() => void handleAdd()} /></View> : null}
           {notice ? <Text style={styles.notice}>{notice} <Link href="/cart" style={styles.signInLink}>VIEW CART →</Link></Text> : null}
@@ -80,6 +87,10 @@ const styles = StyleSheet.create({
   photo: { width: "100%", aspectRatio: 0.82, backgroundColor: "#e7e5dd", marginBottom: 10 },
   price: { color: colors.ink, fontSize: 16, fontWeight: "700", marginTop: 8 },
   label: { color: colors.muted, fontSize: 10, letterSpacing: 1.4, fontWeight: "700", marginTop: 24, marginBottom: 9 },
+  qtyRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  qtyBtn: { width: 38, height: 38, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, alignItems: "center", justifyContent: "center" },
+  qtyBtnText: { color: colors.ink, fontSize: 20 },
+  qtyNumber: { color: colors.ink, fontSize: 15, minWidth: 20, textAlign: "center", fontWeight: "700" },
   signInNote: { padding: 15, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, marginTop: 22 },
   signInLink: { color: colors.ink, fontSize: 10, letterSpacing: 1, fontWeight: "800", marginTop: 12 },
   notice: { color: colors.ink, fontSize: 12, marginTop: 16 },

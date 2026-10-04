@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { AppState } from "react-native";
 import { apiRequest } from "../lib/api";
 import { useAuth } from "./auth-provider";
 
@@ -11,8 +12,10 @@ type CartContextValue = {
   itemCount: number;
   refreshCart: () => Promise<void>;
   addLine: (line: Omit<CartLine, "quantity">) => Promise<void>;
+  addLines: (line: Omit<CartLine, "quantity">, quantity: number) => Promise<void>;
   changeQuantity: (line: CartLine, quantity: number) => Promise<void>;
   removeLine: (line: CartLine) => Promise<void>;
+  clearCart: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -54,6 +57,21 @@ export function CartProvider({ children }: React.PropsWithChildren) {
     return () => clearTimeout(timer);
   }, [userId, refreshCart]);
 
+  // Keep every screen (shop header badge included) in sync without needing
+  // to open the Cart screen or reload the app. Polls while signed in.
+  const refreshRef = useRef(refreshCart);
+  useEffect(() => { refreshRef.current = refreshCart; }, [refreshCart]);
+  useEffect(() => {
+    if (!token) return;
+    let stopped = false;
+    const tick = () => { if (!stopped) void refreshRef.current(); };
+    const timer = setInterval(tick, 4000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") tick();
+    });
+    return () => { stopped = true; clearInterval(timer); sub.remove(); };
+  }, [token]);
+
   const updateCart = useCallback(async (change: (current: CartLine[]) => CartLine[]) => {
     if (!token) throw new Error("Sign in to use your saved cart.");
     setSaving(true);
@@ -85,17 +103,30 @@ export function CartProvider({ children }: React.PropsWithChildren) {
     return [...current, { ...line, quantity: 1 }];
   }), [updateCart]);
 
+  const addLines = useCallback((line: Omit<CartLine, "quantity">, quantity: number) => updateCart((current) => {
+    const qty = Math.max(1, Math.min(99, Math.floor(quantity) || 1));
+    const previous = current.find((item) => sameLine(item, { ...line, quantity: 1 }));
+    if (previous) return current.map((item) => sameLine(item, previous)
+      ? { ...item, quantity: Math.min(99, item.quantity + qty) }
+      : item);
+    return [...current, { ...line, quantity: qty }];
+  }), [updateCart]);
+
   const changeQuantity = useCallback((line: CartLine, quantity: number) => {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) return Promise.resolve();
     return updateCart((current) => current.map((item) => sameLine(item, line) ? { ...item, quantity } : item));
   }, [updateCart]);
 
   const removeLine = useCallback((line: CartLine) => updateCart((current) => current.filter((item) => !sameLine(item, line))), [updateCart]);
+  const clearCart = useCallback(async () => {
+    if (!token) { setLines([]); return; }
+    await updateCart(() => []);
+  }, [token, updateCart]);
   const visibleLines = useMemo(() => userId === ownerUserId ? lines : [], [userId, ownerUserId, lines]);
   const itemCount = visibleLines.reduce((sum, line) => sum + line.quantity, 0);
   const value = useMemo(() => ({
-    lines: visibleLines, loading, saving, error, itemCount, refreshCart, addLine, changeQuantity, removeLine,
-  }), [visibleLines, loading, saving, error, itemCount, refreshCart, addLine, changeQuantity, removeLine]);
+    lines: visibleLines, loading, saving, error, itemCount, refreshCart, addLine, addLines, changeQuantity, removeLine, clearCart,
+  }), [visibleLines, loading, saving, error, itemCount, refreshCart, addLine, addLines, changeQuantity, removeLine, clearCart]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

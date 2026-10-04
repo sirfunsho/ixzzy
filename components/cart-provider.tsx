@@ -189,6 +189,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
   }, [persistSignedInCart, status, userId]);
 
+  // Keep the website in sync when the phone changes the shared cart.
+  // Before: website only loaded once, so you had to reload the page.
+  // Now: re-check when you click back to the tab + every 10s while signed in.
+  useEffect(() => {
+    if (status !== "authenticated" || !userId) return;
+    let stopped = false;
+    async function refreshFromServer() {
+      if (stopped || !readyRef.current) return;
+      if (queuedChanges.current.length > 0) return;
+      try {
+        const response = await fetch("/api/cart", { cache: "no-store" });
+        if (!response.ok) return;
+        const remoteLines = readResponseLines(await response.json());
+        if (stopped || activeUserId.current !== userId) return;
+        if (JSON.stringify(remoteLines) !== JSON.stringify(linesRef.current)) {
+          linesRef.current = remoteLines;
+          setLines(remoteLines);
+        }
+      } catch {
+        // Keep the current cart visible; next tick will retry.
+      }
+    }
+    const timer = setInterval(() => { void refreshFromServer(); }, 10_000);
+    function onFocus() { void refreshFromServer(); }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => { stopped = true; clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
+  }, [status, userId]);
+
   const changeCart = useCallback((change: (current: CartLine[]) => CartLine[]) => {
     if (!readyRef.current) {
       queuedChanges.current.push(change);

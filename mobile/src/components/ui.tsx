@@ -1,6 +1,7 @@
 import { Link } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export const colors = {
   ink: "#10100e",
@@ -14,13 +15,15 @@ export const colors = {
 
 export function BrandHeader({ count = 0 }: { count?: number }) {
   return (
-    <View style={styles.header}>
-      <Link href="/" style={styles.wordmark}>IXZZY<Text style={styles.dot}>.</Text></Link>
-      <View style={styles.headerLinks}>
-        <Link href="/account" style={styles.headerLink}>ACCOUNT</Link>
-        <Link href="/cart" style={styles.headerLink}>CART ({count})</Link>
+    <SafeAreaView edges={["top"]} style={styles.headerSafe}>
+      <View style={styles.header}>
+        <Link href="/" style={styles.wordmark}>IXZZY<Text style={styles.dot}>.</Text></Link>
+        <View style={styles.headerLinks}>
+          <Link href="/account" style={styles.headerLink}>ACCOUNT</Link>
+          <Link href="/cart" style={styles.headerLink}>CART ({count})</Link>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -69,10 +72,11 @@ export const ui = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  header: { minHeight: 64, paddingHorizontal: 20, backgroundColor: colors.ink, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  wordmark: { color: colors.card, fontWeight: "800", letterSpacing: 2.1, fontSize: 18 },
+  headerSafe: { backgroundColor: colors.ink },
+  header: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.ink, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  wordmark: { color: colors.card, fontWeight: "800", letterSpacing: 2.1, fontSize: 18, flexShrink: 0 },
   dot: { color: colors.yellow },
-  headerLinks: { flexDirection: "row", alignItems: "center", gap: 18 },
+  headerLinks: { flexDirection: "row", alignItems: "center", gap: 14, flexShrink: 1 },
   headerLink: { color: colors.card, fontSize: 10, letterSpacing: 1.1, fontWeight: "700" },
   primaryButton: { minHeight: 50, borderRadius: 3, backgroundColor: colors.yellow, paddingHorizontal: 18, alignItems: "center", justifyContent: "center" },
   primaryButtonText: { color: colors.ink, fontSize: 13, fontWeight: "800", letterSpacing: 0.4 },
