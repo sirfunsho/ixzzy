@@ -6,6 +6,7 @@ const iosUrlScheme = iosGoogleClientId
   : undefined;
 
 const config: ExpoConfig = {
+  owner: "sirfunshos-team",
   name: "IXZZY",
   slug: "ixzzy",
   version: "1.0.0",
@@ -32,6 +33,11 @@ const config: ExpoConfig = {
       ? [["@react-native-google-signin/google-signin", { iosUrlScheme }] as [string, { iosUrlScheme: string }]]
       : []),
   ],
+  extra: {
+    eas: {
+      projectId: "fbc52e7b-1946-4ddc-a633-9d2624f75e30",
+    },
+  },
   experiments: { typedRoutes: true },
 };
 
