@@ -23,6 +23,7 @@ export default function CheckoutScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   React.useEffect(() => {
     void fetch(`${API_BASE_URL}/api/products`).then((r) => r.json())
@@ -48,7 +49,7 @@ export default function CheckoutScreen() {
     setError(null);
     try {
       if (lines.length === 0) throw new Error("Your cart is empty.");
-      const result = await apiRequest<{ reference: string }>(
+      const result = await apiRequest<{ reference: string; emailSent?: boolean }>(
         "/api/orders",
         {
           method: "POST",
@@ -60,6 +61,7 @@ export default function CheckoutScreen() {
         token,
       );
       setReference(result.reference);
+      setEmailSent(result.emailSent === true);
       await clearCart().catch(() => undefined);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Order could not be saved.");
@@ -79,6 +81,11 @@ export default function CheckoutScreen() {
             <Text style={styles.doneTitle}>Request complete.</Text>
             <Text style={ui.body}>Thank you, {name}. Keep your reference:</Text>
             <Text style={styles.ref}>{reference}</Text>
+            <Text style={[ui.body, { marginTop: 8 }]}>
+              {emailSent
+                ? `A confirmation email was sent to ${email}. Check spam if you don't see it.`
+                : "We could not send the confirmation email, so please keep your reference and contact us if needed."}
+            </Text>
             <Text style={[ui.body, { marginTop: 8 }]}>Payment is not taken yet. Delivery will be confirmed separately.</Text>
             <View style={{ marginTop: 20 }}>
               <Link href="/" asChild>

@@ -77,7 +77,7 @@ export default function CartScreen() {
           <View style={styles.totalBox}>
             <View style={ui.row}><Text style={styles.totalLabel}>SUBTOTAL</Text><Text style={styles.totalPrice}>₦ {total.toLocaleString("en-NG")}</Text></View>
             <Text style={styles.disclaimer}>This is your shared saved cart. Checkout works on both phone and website.</Text>
-            <View style={{ marginTop: 16 }}><Link href="/checkout" asChild><Pressable style={styles.checkoutButton}><Text style={styles.continueButtonText}>CHECKOUT →</Text></Pressable></Link></View>
+            <View style={{ marginTop: 16 }}><Link href="/checkout" asChild><Pressable style={styles.checkoutButton}><Text style={styles.checkoutButtonText}>CHECKOUT →</Text></Pressable></Link></View>
             <View style={{ marginTop: 10 }}><Link href="/" asChild><Pressable style={styles.continueButton}><Text style={styles.continueButtonText}>CONTINUE SHOPPING</Text></Pressable></Link></View>
           </View>
         ) : null}
@@ -135,6 +135,7 @@ const styles = StyleSheet.create({
   continueButton: { minHeight: 50, backgroundColor: colors.yellow, justifyContent: "center", alignItems: "center" },
   checkoutButton: { minHeight: 50, backgroundColor: colors.ink, justifyContent: "center", alignItems: "center" },
   continueButtonText: { color: colors.ink, fontSize: 12, fontWeight: "800", letterSpacing: 0.4 },
+  checkoutButtonText: { color: colors.card, fontSize: 12, fontWeight: "800", letterSpacing: 0.4 },
   errorBox: { backgroundColor: "#fff3f1", padding: 14, marginTop: 24 },
   errorText: { color: colors.red, fontSize: 13, lineHeight: 18 },
   retry: { color: colors.ink, fontSize: 10, letterSpacing: 1, fontWeight: "800", marginTop: 12 },
