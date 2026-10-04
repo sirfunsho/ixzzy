@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+/* -----------------------------------------------------------------------------
+   IXZZY — design tokens
+   Palette is black, off-white, greys and a single acid yellow (#EFFF00) that is
+   only ever used as an accent or disruption, never as decoration.
+
+   Two layers:
+   1. Fixed palette      — ink / paper / acid.
+   2. Tone scoped tokens — fg / line / label / muted / accent. Sections declare
+      a tone (`.ix-tone-dark` or `.ix-tone-light`) and every component inherits
+      the right values from there, so nothing needs theme props.
+
+   `accent` is the load-bearing one. Acid yellow only reads on black (19.5:1);
+   on off-white it is 1.06:1, i.e. invisible. So the light tone swaps the accent
+   to black and keeps acid reserved for the black bands.
+-------------------------------------------------------------------------------*/
+@theme {
+  --color-ink: #000000;
+  --color-paper: #f2f0eb;
+  --color-acid: #efff00;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-fg: var(--ix-fg);
+  --color-line: var(--ix-line);
+  --color-label: var(--ix-label);
+  --color-muted: var(--ix-muted);
+  --color-accent: var(--ix-accent);
+  --color-on-accent: var(--ix-on-accent);
+}
+
+/* Fallback tone (dark) so tokens always resolve. */
+:root {
+  --ix-bg: #000000;
+  --ix-fg: #f2f0eb;
+  --ix-line: rgb(242 240 235 / 0.14);
+  --ix-label: rgb(242 240 235 / 0.42);
+  --ix-muted: rgb(242 240 235 / 0.68);
+  --ix-accent: #efff00;
+  --ix-on-accent: #000000;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-ink);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-acid);
+    color: var(--color-ink);
+  }
+
+  /* Tone aware, so the ring stays visible on off-white as well as black. */
+  :focus-visible {
+    outline: 1px solid var(--ix-accent);
+    outline-offset: 4px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Section tones ---------------------------------------------------------- */
+  .ix-tone-dark {
+    --ix-bg: #000000;
+    --ix-fg: #f2f0eb;
+    --ix-line: rgb(242 240 235 / 0.14);
+    --ix-label: rgb(242 240 235 / 0.42);
+    --ix-muted: rgb(242 240 235 / 0.68);
+    --ix-accent: #efff00;
+    --ix-on-accent: #000000;
+    background-color: var(--ix-bg);
+    color: var(--ix-fg);
+  }
+
+  .ix-tone-light {
+    --ix-bg: #f2f0eb;
+    --ix-fg: #000000;
+    --ix-line: rgb(0 0 0 / 0.14);
+    --ix-label: rgb(0 0 0 / 0.45);
+    --ix-muted: rgb(0 0 0 / 0.66);
+    /* Acid never appears on off-white: the accent becomes black instead. */
+    --ix-accent: #000000;
+    --ix-on-accent: #f2f0eb;
+    background-color: var(--ix-bg);
+    color: var(--ix-fg);
+  }
+
+  /* Placeholder media surfaces --------------------------------------------- */
+
+  /* Atmospheric light wash. Keeps a near-black surface from reading as flat. */
+  .ix-wash {
+    background-image:
+      radial-gradient(
+        125% 90% at 50% -10%,
+        rgb(255 255 255 / 0.16) 0%,
+        rgb(0 0 0 / 0) 62%
+      ),
+      radial-gradient(
+        90% 70% at 50% 110%,
+        rgb(255 255 255 / 0.06) 0%,
+        rgb(0 0 0 / 0) 72%
+      );
+  }
+
+  /* Static film grain, drawn with an inline SVG so no asset is required. */
+  .ix-grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23grain)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 140px 140px;
+  }
+
+  /* Motion ----------------------------------------------------------------- */
+
+  /* The one entrance the site has: the hero settles in, nothing else animates. */
+  .ix-rise {
+    animation: ix-rise 1000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .ix-rise-late {
+    animation-delay: 160ms;
+  }
+
+  .ix-rise-later {
+    animation-delay: 320ms;
+  }
+}
+
+@keyframes ix-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes cart-count-pop {
+  0%,
+  100% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+}
+
+.cart-count-pop {
+  display: inline-block;
+  animation: cart-count-pop 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
