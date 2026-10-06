@@ -17,6 +17,7 @@ type AuthContextValue = {
   googleReady: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -81,6 +82,16 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     await acceptSession(session);
   }, [acceptSession]);
 
+  const signInWithCode = useCallback(async (code: string) => {
+    const clean = code.trim();
+    if (!clean) throw new Error("Google sign-in could not be completed. Please try again.");
+    const session = await apiRequest<MobileSession>("/api/mobile/auth/browser/exchange", {
+      method: "POST",
+      body: JSON.stringify({ code: clean }),
+    });
+    await acceptSession(session);
+  }, [acceptSession]);
+
   const signInWithGoogle = useCallback(async () => {
     // Browser-based Google login (Option B). Opens the website login,
     // the server prints a 5-minute pickup code, we swap it for a keycard.
@@ -90,13 +101,13 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     if (result.type === "cancel" || result.type === "dismiss") return;
     if (result.type !== "success") throw new Error("Google sign-in could not be completed. Please try again.");
     const code = new URL(result.url).searchParams.get("code");
-    if (!code) throw new Error("Google sign-in could not be completed. Please try again.");
-    const session = await apiRequest<MobileSession>("/api/mobile/auth/browser/exchange", {
-      method: "POST",
-      body: JSON.stringify({ code }),
-    });
-    await acceptSession(session);
-  }, [acceptSession]);
+    if (!code) {
+      // Standalone Android sometimes hands the link to the router instead of
+      // returning it here. The /auth screen below picks up the code instead.
+      throw new Error("Finishing Google sign-in… if you see an app screen, wait a moment.");
+    }
+    await signInWithCode(code);
+  }, [signInWithCode]);
 
   const signOut = useCallback(async () => {
     const savedToken = token;
@@ -116,8 +127,9 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     googleReady: true,
     signInWithPassword,
     signInWithGoogle,
+    signInWithCode,
     signOut,
-  }), [user, token, loading, signInWithPassword, signInWithGoogle, signOut]);
+  }), [user, token, loading, signInWithPassword, signInWithGoogle, signInWithCode, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
